@@ -1,0 +1,106 @@
+{
+    "Ros2LulaIk": {
+        "version": 1,
+        "language": "python",
+        "icon": "icons/icon.svg",
+        "uiName": "ROS2 Lula Inverse Kinematics",
+        "description": [
+            "ROS2 OmniGraph node for Lula Inverse Kinematics.",
+            "Subscribes to cartesian pose commands and outputs joint positions."
+        ],
+        "categoryDefinitions": "config/CategoryDefinition.json",
+        "categories": ["extension:Category"],
+        "inputs": {
+            "execIn": {
+                "type": "execution",
+                "description": "The input execution port"
+            },
+            "context": {
+                "type": "uint64",
+                "description": "ROS2 context handle, Default of zero will use the default global context",
+                "default": 0
+            },
+            "nodeNamespace": {
+                "type": "string",
+                "description": "Namespace of ROS2 Node, prepends any published/subscribed topic by the node namespace",
+                "default": ""
+            },
+            "qosProfile": {
+                "type": "string",
+                "description": "QoS profile: 'lossy' (BEST_EFFORT, drops messages) or 'lossless' (RELIABLE, guarantees delivery)",
+                "default": "lossy"
+            },
+            "queueSize": {
+                "type": "uint64",
+                "description": "The number of messages to queue up before throwing some away, in case messages are collected faster than they can be sent. Only honored if 'history' QoS policy was set to 'keep last'. This setting can be overwritten by qosProfile input.",
+                "default": 10
+            },
+            "topicName": {
+                "type": "string",
+                "description": "Topic name for cartesian pose commands",
+                "default": "cartesian_command"
+            },
+            "robotUsdPath": {
+                "type": "string",
+                "description": "Path to the robot USD file",
+                "default": ""
+            },
+            "robotUrdfPath": {
+                "type": "string",
+                "description": "Path to the robot URDF file",
+                "default": ""
+            },
+            "robotYamlPath": {
+                "type": "string",
+                "description": "Path to the robot YAML description file for Lula kinematics",
+                "default": ""
+            },
+            "robotPrimPath": {
+                "type": "string",
+                "description": "Prim path where the robot will be added in the stage",
+                "default": "/World/Robot"
+            },
+            "endEffectorFrame": {
+                "type": "string",
+                "description": "Name of the end effector frame for kinematics",
+                "default": ""
+            },
+            "jointPositions": {
+                "type": "double[]",
+                "description": "Current joint positions for warm start in IK solver",
+                "default": []
+            }
+        },
+        "outputs": {
+            "execOut": {
+                "type": "execution",
+                "description": "Triggers when a new message is received"
+            },
+            "effortCommand": {
+                "type": "double[]",
+                "description": "Effort Commands",
+                "default": []
+            },
+            "jointNames": {
+                "type": "token[]",
+                "description": "Commanded joint names",
+                "default": []
+            },
+            "positionCommand": {
+                "type": "double[]",
+                "description": "Position Commands",
+                "default": []
+            },
+            "timestamp": {
+                "type": "double",
+                "description": "Timestamp",
+                "default": 0.0
+            },
+            "velocityCommand": {
+                "type": "double[]",
+                "description": "Velocity Commands",
+                "default": []
+            }
+        }
+    }
+}
