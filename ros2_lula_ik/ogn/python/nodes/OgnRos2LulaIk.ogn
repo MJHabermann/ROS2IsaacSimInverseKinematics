@@ -3,10 +3,10 @@
         "version": 1,
         "language": "python",
         "icon": "icons/icon.svg",
-        "uiName": "ROS2 Lula Inverse Kinematics",
+        "uiName": "Lula Inverse Kinematics",
         "description": [
-            "ROS2 OmniGraph node for Lula Inverse Kinematics.",
-            "Subscribes to cartesian pose commands and outputs joint positions."
+            "OmniGraph node for Lula Inverse Kinematics.",
+            "Takes target cartesian pose as inputs and outputs joint positions."
         ],
         "categoryDefinitions": "config/CategoryDefinition.json",
         "categories": ["extension:Category"],
@@ -15,30 +15,10 @@
                 "type": "execution",
                 "description": "The input execution port"
             },
-            "context": {
-                "type": "uint64",
-                "description": "ROS2 context handle, Default of zero will use the default global context",
-                "default": 0
-            },
-            "nodeNamespace": {
-                "type": "string",
-                "description": "Namespace of ROS2 Node, prepends any published/subscribed topic by the node namespace",
-                "default": ""
-            },
-            "qosProfile": {
-                "type": "string",
-                "description": "QoS profile: 'lossy' (BEST_EFFORT, drops messages) or 'lossless' (RELIABLE, guarantees delivery)",
-                "default": "lossy"
-            },
-            "queueSize": {
-                "type": "uint64",
-                "description": "The number of messages to queue up before throwing some away, in case messages are collected faster than they can be sent. Only honored if 'history' QoS policy was set to 'keep last'. This setting can be overwritten by qosProfile input.",
-                "default": 10
-            },
-            "topicName": {
-                "type": "string",
-                "description": "Topic name for cartesian pose commands",
-                "default": "cartesian_command"
+            "targetPose": {
+                "type": "double[]",
+                "description": "Target pose as single array [x, y, z, qw, qx, qy, qz] (7 values)",
+                "default": []
             },
             "robotUsdPath": {
                 "type": "string",
@@ -74,11 +54,11 @@
         "outputs": {
             "execOut": {
                 "type": "execution",
-                "description": "Triggers when a new message is received"
+                "description": "Triggers when a solution is found"
             },
             "effortCommand": {
                 "type": "double[]",
-                "description": "Effort Commands",
+                "description": "Effort Commands (zeros)",
                 "default": []
             },
             "jointNames": {
@@ -88,7 +68,7 @@
             },
             "positionCommand": {
                 "type": "double[]",
-                "description": "Position Commands",
+                "description": "Joint position commands (IK solution)",
                 "default": []
             },
             "timestamp": {
@@ -98,7 +78,7 @@
             },
             "velocityCommand": {
                 "type": "double[]",
-                "description": "Velocity Commands",
+                "description": "Velocity Commands (zeros)",
                 "default": []
             }
         }

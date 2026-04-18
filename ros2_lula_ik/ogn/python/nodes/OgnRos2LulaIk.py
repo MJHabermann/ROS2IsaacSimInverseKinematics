@@ -1,19 +1,9 @@
 """
-OmniGraph core Python API:
-  https://docs.omniverse.nvidia.com/kit/docs/omni.graph/latest/Overview.html
+OmniGraph Lula Inverse Kinematics Node
 
-OmniGraph attribute data types:
-  https://docs.omniverse.nvidia.com/kit/docs/omni.graph.docs/latest/dev/ogn/attribute_types.html
-
-Collection of OmniGraph code examples in Python:
-  https://docs.omniverse.nvidia.com/kit/docs/omni.graph.docs/latest/dev/ogn/ogn_code_samples_python.html
-
-Collection of OmniGraph tutorials:
-  https://docs.omniverse.nvidia.com/kit/docs/omni.graph.tutorials/latest/Overview.html
+Computes inverse kinematics for target poses using Lula kinematics solver.
+Inputs and outputs are delivered via OmniGraph attributes.
 """
-import rclpy
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
-import geometry_msgs.msg
 import numpy as np
 
 import omni.graph.core
@@ -32,94 +22,11 @@ class OgnRos2LulaIkInternalState(BaseResetNode):
 
     def __init__(self):
         """Instantiate the per-node state information"""
-        self._data = None
-        self._ros2_node = None
-        self._subscription = None
         self._kinematics_solver = None
         self._end_effector_frame = None
         self._joint_names = []
         # call parent class to set up timeline event for custom reset
         super().__init__(initialize=False)
-
-    @property
-    def data(self):
-        """Get received data, and clean it after reading"""
-        tmp = self._data
-        self._data = None
-        return tmp
-
-    def _callback(self, msg):
-        """Function that is called when a message is received by the subscription."""
-        # Store the Pose message data
-        position = np.array([msg.position.x, msg.position.y, msg.position.z])
-        orientation = np.array([msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z])
-        
-        # Normalize quaternion to ensure valid rotation (critical for IK!)
-        quat_norm = np.linalg.norm(orientation)
-        if quat_norm > 1e-6:
-            orientation = orientation / quat_norm
-        else:
-            print(f"[ROS2 IK] WARNING: Invalid quaternion received (near-zero norm)")
-            return
-        
-        print(f"[ROS2 IK] Received message: pos=({position[0]:.4f}, {position[1]:.4f}, {position[2]:.4f}), " +
-              f"ori=({orientation[0]:.4f}, {orientation[1]:.4f}, {orientation[2]:.4f}, {orientation[3]:.4f})")
-        
-        self._data = {
-            "position": position,
-            "orientation": orientation
-        }
-
-    def initialize_ros2(self, node_name, topic_name, queue_size, namespace="", qos_profile="lossy"):
-        """Initialize ROS 2 node and subscription.
-        
-        Args:
-            qos_profile: 'lossy' for BEST_EFFORT (drops messages if slow) or 
-                         'lossless' for RELIABLE (guarantees delivery)
-        """
-        try:
-            rclpy.init()
-        except:
-            pass
-        # create ROS 2 node with optional namespace
-        if not self._ros2_node:
-            self._ros2_node = rclpy.create_node(
-                node_name=node_name,
-                namespace=namespace if namespace else None
-            )
-            print(f"[ROS2 IK] Created node: {node_name} with namespace: {namespace}")
-        # create ROS 2 subscription for Pose messages
-        if not self._subscription:
-            # Build full topic name for logging
-            full_topic = topic_name
-            if namespace:
-                full_topic = f"/{namespace}/{topic_name}" if not topic_name.startswith('/') else f"/{namespace}{topic_name}"
-            print(f"[ROS2 IK] Subscribing to topic: {full_topic} with QoS: {qos_profile}")
-            
-            # Create QoS profile based on type
-            if qos_profile.lower() == "lossless":
-                # Lossless: RELIABLE ensures all messages are delivered
-                qos = QoSProfile(
-                    reliability=ReliabilityPolicy.RELIABLE,
-                    durability=DurabilityPolicy.TRANSIENT_LOCAL,
-                    history=HistoryPolicy.KEEP_LAST,
-                    depth=queue_size
-                )
-            else:
-                # Lossy (default): BEST_EFFORT drops messages if subscriber is slow
-                qos = QoSProfile(
-                    reliability=ReliabilityPolicy.BEST_EFFORT,
-                    durability=DurabilityPolicy.VOLATILE,
-                    history=HistoryPolicy.KEEP_LAST,
-                    depth=min(queue_size, 1)  # Only keep latest to prevent memory buildup
-                )
-            
-            self._subscription = self._ros2_node.create_subscription(
-                msg_type=geometry_msgs.msg.Pose,
-                topic=topic_name,
-                callback=self._callback,
-                qos_profile=qos
-            )
 
     def initialize_kinematics(self, robot_yaml_path, robot_urdf_path, end_effector_frame=None):
         """Initialize Lula kinematics solver."""
@@ -128,7 +35,9 @@ class OgnRos2LulaIkInternalState(BaseResetNode):
                 robot_description_path=robot_yaml_path,
                 urdf_path=robot_urdf_path
             )
-            self._joint_names = self._kinematics_solver.get_joint_names()
+            all_joint_names = self._kinematics_solver.get_joint_names()
+            # Only use the first 6 joints
+            self._joint_names = all_joint_names[:6]
             # Get end effector frame from solver if not explicitly provided
             if end_effector_frame:
                 self._end_effector_frame = end_effector_frame
@@ -173,39 +82,20 @@ class OgnRos2LulaIkInternalState(BaseResetNode):
         
         return ik_result
 
-
     def spin_once(self, timeout_sec=0.01):
-        """Do ROS 2 work to take an incoming message from the topic, if any."""
-        if self._ros2_node:
-            rclpy.spin_once(self._ros2_node, timeout_sec=timeout_sec)
+        """Placeholder for compatibility - not needed with OmniGraph inputs."""
+        pass
 
     def custom_reset(self):
-        """On timeline stop, destroy ROS 2 subscription and node."""
-        # Use getattr with defaults in case __init__ wasn't fully completed
-        ros2_node = getattr(self, '_ros2_node', None)
-        subscription = getattr(self, '_subscription', None)
-        
-        if ros2_node:
-            if subscription:
-                ros2_node.destroy_subscription(subscription)
-            ros2_node.destroy_node()
-
-        self._data = None
-        self._ros2_node = None
-        self._subscription = None
+        """On timeline stop, cleanup."""
         self._kinematics_solver = None
         self._end_effector_frame = None
         self._joint_names = []
         self.initialized = False
 
-        try:
-            rclpy.try_shutdown()
-        except:
-            pass
-
 
 class OgnRos2LulaIk:
-    """The OmniGraph node class for Lula Inverse Kinematics with ROS2"""
+    """The OmniGraph node class for Lula Inverse Kinematics"""
 
     @staticmethod
     def internal_state():
@@ -223,17 +113,8 @@ class OgnRos2LulaIk:
                 db.log_warning("Robot YAML and URDF paths are required for kinematics solver")
                 return False
 
-            # Initialize state (ROS 2 node, subscriber, and kinematics solver)
+            # Initialize state (kinematics solver)
             if not state.initialized:
-                # Initialize ROS2 node and subscription
-                state.initialize_ros2(
-                    node_name="lula_ik_node",
-                    topic_name=db.inputs.topicName,
-                    queue_size=int(db.inputs.queueSize),
-                    namespace=db.inputs.nodeNamespace,
-                    qos_profile=db.inputs.qosProfile if db.inputs.qosProfile else "lossy"
-                )
-
                 # Optionally add robot to stage
                 if db.inputs.robotUsdPath and db.inputs.robotPrimPath:
                     try:
@@ -254,62 +135,102 @@ class OgnRos2LulaIk:
                 db.log_info(f"Initialized kinematics solver with end effector frame: {state._end_effector_frame}")
                 db.log_info(f"Joint names: {state._joint_names}")
 
-            # Continuously spin to receive incoming messages (non-blocking)
+            # Get target pose from OmniGraph inputs (single array: [x, y, z, qw, qx, qy, qz])
+            target_pose = None
+            
             try:
-                state.spin_once(timeout_sec=0.001)
-            except Exception as spin_error:
-                db.log_warning(f"Error during ROS2 spin: {spin_error}")
+                if hasattr(db.inputs, 'targetPose') and db.inputs.targetPose is not None:
+                    input_data = db.inputs.targetPose
+                    
+                    # Handle different input formats
+                    # Could be: list, numpy array, or ROS2 Float64MultiArray message
+                    if isinstance(input_data, dict) and 'data' in input_data:
+                        # ROS2 Float64MultiArray format: {"data": [...]}
+                        input_data = input_data['data']
+                    elif hasattr(input_data, 'data'):
+                        # ROS2 message object with .data attribute
+                        input_data = input_data.data
+                    
+                    target_pose = np.array(input_data, dtype=np.float64)
+                    db.log_info(f"Parsed target pose: {target_pose}")
+            except (TypeError, ValueError, AttributeError) as e:
+                db.log_warning(f"Invalid target pose format: {type(db.inputs.targetPose)} - {str(e)}")
+                db.log_warning(f"Raw input: {db.inputs.targetPose}")
+                return True
+            
+            if target_pose is None or target_pose.size < 7:
+                db.log_warning(f"Target pose must have 7 values [x, y, z, qw, qx, qy, qz], got {target_pose.size if target_pose is not None else 0}")
+                return True
+            
+            # Split into position and orientation
+            target_position = target_pose[0:3]
+            target_orientation = target_pose[3:7]
 
-            # Process incoming cartesian command if one was received
-            cartesian_data = state.data
-            if cartesian_data is not None:
-                db.log_info(f"Received target pose - Position: {cartesian_data['position']}, Orientation: {cartesian_data['orientation']}")
-                
-                # Get initial joint positions for warm start (if provided)
-                initial_positions = None
-                if len(db.inputs.jointPositions) > 0:
-                    initial_positions = np.array(db.inputs.jointPositions)
+            # Normalize quaternion to ensure valid rotation (critical for IK!)
+            quat_norm = np.linalg.norm(target_orientation)
+            if quat_norm > 1e-6:
+                target_orientation = target_orientation / quat_norm
+            else:
+                db.log_warning("Invalid quaternion received (near-zero norm)")
+                return True
+            
+            db.log_info(f"Received target pose - Position: {target_position}, Orientation: {target_orientation}")
+            
+            # Get initial joint positions for warm start (if provided)
+            initial_positions = None
+            if len(db.inputs.jointPositions) > 0:
+                # Only use the first 6 positions
+                initial_positions = np.array(db.inputs.jointPositions[:6])
 
-                # Compute inverse kinematics with retry strategies
+            # Compute inverse kinematics with retry strategies
+            db.log_info(f"Attempting IK with target position: {target_position}")
+            db.log_info(f"Target orientation (quaternion): {target_orientation}")
+            
+            ik_result = state.compute_ik(
+                target_position=target_position,
+                target_orientation=target_orientation,
+                initial_joint_positions=initial_positions
+            )
+
+            success = False
+            joint_positions = None
+            
+            if ik_result is not None:
+                joint_positions, success = ik_result
+                db.log_info(f"Full pose IK result - Success: {success}")
+            else:
+                db.log_error("IK solver returned None")
+            
+            # If full IK failed, try position-only (ignores orientation)
+            if not success:
+                db.log_warning("Full pose IK failed, trying position-only approach...")
                 ik_result = state.compute_ik(
-                    target_position=cartesian_data["position"],
-                    target_orientation=cartesian_data["orientation"],
-                    initial_joint_positions=initial_positions
+                    target_position=target_position,
+                    target_orientation=target_orientation,
+                    initial_joint_positions=initial_positions,
+                    position_only=True
                 )
-
-                success = False
-                joint_positions = None
-                
                 if ik_result is not None:
                     joint_positions, success = ik_result
-                
-                # If full IK failed, try position-only (ignores orientation)
-                if not success:
-                    db.log_warning("Full pose IK failed, trying position-only...")
-                    ik_result = state.compute_ik(
-                        target_position=cartesian_data["position"],
-                        target_orientation=cartesian_data["orientation"],
-                        initial_joint_positions=initial_positions,
-                        position_only=True
-                    )
-                    if ik_result is not None:
-                        joint_positions, success = ik_result
-                        if success:
-                            db.log_info("Position-only IK succeeded (orientation ignored)")
-
-                if success and joint_positions is not None:
-                    db.log_info(f"IK solution found: {joint_positions.tolist()}")
-                    # Set outputs
-                    db.outputs.positionCommand = joint_positions.tolist()
-                    db.outputs.jointNames = state._joint_names
-                    db.outputs.velocityCommand = [0.0] * len(joint_positions)
-                    db.outputs.effortCommand = [0.0] * len(joint_positions)
-                    db.outputs.timestamp = 0.0  # TODO: Add proper timestamp
-
-                    # Trigger output execution
-                    db.outputs.execOut = omni.graph.core.ExecutionAttributeState.ENABLED
+                    db.log_info(f"Position-only IK result - Success: {success}")
+                    if success:
+                        db.log_info("Position-only IK succeeded (orientation ignored)")
                 else:
-                    db.log_warning(f"IK solution not found for target pose: pos={cartesian_data['position']}, ori={cartesian_data['orientation']}")
+                    db.log_error("Position-only IK solver also returned None")
+
+            if success and joint_positions is not None:
+                db.log_info(f"IK solution found: {joint_positions.tolist()}")
+                # Set outputs
+                db.outputs.positionCommand = joint_positions.tolist()
+                db.outputs.jointNames = state._joint_names
+                db.outputs.velocityCommand = [0.0] * len(joint_positions)
+                db.outputs.effortCommand = [0.0] * len(joint_positions)
+                db.outputs.timestamp = 0.0
+
+                # Trigger output execution
+                db.outputs.execOut = omni.graph.core.ExecutionAttributeState.ENABLED
+            else:
+                db.log_warning(f"IK solution not found for target pose: pos={target_position}, ori={target_orientation}")
 
         except Exception as e:
             db.log_error(f"Computation error: {e}")

@@ -10,10 +10,10 @@ order = 0
 [package]
 version = "0.1.0"
 category = "graph"
-title = "ROS2 Lula Inverse Kinematics"
-description = "This plugin provides a inverse kinematic solver ros2 node"
+title = "Lula Inverse Kinematics"
+description = "OmniGraph nodes for Lula inverse and forward kinematics"
 authors = ["Michael Habermann Habe6943@vandals.uidaho.edu"]
-keywords = ["ROS2", "Inverse Kinematics"]
+keywords = ["Kinematics", "IK", "FK"]
 changelog = "docs/CHANGELOG.md"
 readme = "docs/README.md"
 preview_image = "data/preview.png"
@@ -22,7 +22,6 @@ icon = "data/icon.png"
 [dependencies]
 "omni.graph" = {}
 "omni.graph.tools" = {}
-"isaacsim.ros2.bridge" = {}
 
 # define the Python module that the extension provides
 [[python.module]]

@@ -3,10 +3,10 @@
         "version": 1,
         "language": "python",
         "icon": "icons/icon.svg",
-        "uiName": "ROS2 Lula Forward Kinematics",
+        "uiName": "Lula Forward Kinematics",
         "description": [
-            "ROS2 OmniGraph node for Lula Forward Kinematics.",
-            "Subscribes to joint_states, computes the end effector pose, and publishes it to a ROS2 topic."
+            "OmniGraph node for Lula Forward Kinematics.",
+            "Takes joint positions as input and outputs the end effector pose."
         ],
         "categoryDefinitions": "config/CategoryDefinition.json",
         "categories": ["extension:Category"],
@@ -15,30 +15,10 @@
                 "type": "execution",
                 "description": "The input execution port"
             },
-            "context": {
-                "type": "uint64",
-                "description": "ROS2 context handle, Default of zero will use the default global context",
-                "default": 0
-            },
-            "nodeNamespace": {
-                "type": "string",
-                "description": "Namespace of ROS2 Node, prepends any published/subscribed topic by the node namespace",
-                "default": ""
-            },
-            "queueSize": {
-                "type": "uint64",
-                "description": "The number of messages to queue up before throwing some away",
-                "default": 10
-            },
-            "pubTopicName": {
-                "type": "string",
-                "description": "Topic name for publishing cartesian pose",
-                "default": "cartesian_pose"
-            },
-            "subTopicName": {
-                "type": "string",
-                "description": "Topic name for subscribing to joint states",
-                "default": "joint_states"
+            "jointPositions": {
+                "type": "double[]",
+                "description": "Joint positions",
+                "default": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             },
             "robotUrdfPath": {
                 "type": "string",
@@ -52,10 +32,20 @@
             },
             "endEffectorFrame": {
                 "type": "string",
-                "description": "Name of the end effector frame for kinematics (optional, will use first available from YAML)",
+                "description": "Name of the end effector frame for kinematics (optional, will use last frame from YAML)",
                 "default": ""
             }
+        },
+        "outputs": {
+            "execOut": {
+                "type": "execution",
+                "description": "Triggers after FK computation"
+            },
+            "endEffectorPose": {
+                "type": "double[]",
+                "description": "End effector pose as single array [x, y, z, qw, qx, qy, qz] (7 values)",
+                "default": []
+            }
         }
-
     }
 }
